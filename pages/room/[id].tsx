@@ -7,12 +7,13 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { db } from "../../firebase/clientApp";
 import { doc, DocumentData, onSnapshot, setDoc } from "firebase/firestore";
+import io from "Socket.IO-client";
 import CopyLink from "../../components/CopyLink";
 import { Button } from "@mui/material";
 import Participants from "../../components/Participants";
 import Results from "../../components/Results";
 import Questions from "../../components/Questions";
-
+let socket: any;
 const GamePage: NextPage = () => {
   const router = useRouter();
   const { id, user } = router.query;
@@ -39,11 +40,25 @@ const GamePage: NextPage = () => {
         if (data!.questions) {
           setQuestions(Object.values(data!.questions));
         }
-        setState(data!.state);
+        // setState(data!.state);
         setCurrentQuestion(data!.currentQuestion);
       }
     });
+    socketInitializer();
   }, [id]);
+
+  const socketInitializer = async () => {
+    await fetch("/api/socket");
+    socket = io();
+
+    socket.on("connect", () => {
+      console.log("connected");
+    });
+    socket.on("update-game-state", (newState: number) => {
+      console.log("update-game-state", newState);
+      setState(newState);
+    });
+  };
 
   const nextQuestion = () => {
     if (currentQuestion < questions.length - 1) {
@@ -84,28 +99,29 @@ const GamePage: NextPage = () => {
   };
 
   const toggleReady = () => {
-    if (!user) return;
-    const updatedUser = { ...users[user], ready: !users[user].ready };
-    const updatedUsers = { ...users, [user]: updatedUser };
-    if (Object.values(updatedUsers).every((user) => user.ready)) {
-      // all players are ready
-      const updatedUsers = Object.fromEntries(
-        Object.entries(users).map(([key, value]) => {
-          return [key, { ...value, ready: false }];
-        })
-      );
-      setDoc(
-        doc(db, "game_new", String(id)),
-        { ...data, users: updatedUsers, state: 1 },
-        { merge: true }
-      );
-      return;
-    }
-    setDoc(
-      doc(db, "game_new", String(id)),
-      { ...data, users: updatedUsers },
-      { merge: true }
-    );
+    if (!user || !socket) return;
+    socket.emit("toggle-ready", { id, user });
+    // const updatedUser = { ...users[user], ready: !users[user].ready };
+    // const updatedUsers = { ...users, [user]: updatedUser };
+    // if (Object.values(updatedUsers).every((user) => user.ready)) {
+    //   // all players are ready
+    //   const updatedUsers = Object.fromEntries(
+    //     Object.entries(users).map(([key, value]) => {
+    //       return [key, { ...value, ready: false }];
+    //     })
+    //   );
+    //   setDoc(
+    //     doc(db, "game_new", String(id)),
+    //     { ...data, users: updatedUsers, state: 1 },
+    //     { merge: true }
+    //   );
+    //   return;
+    // }
+    // setDoc(
+    //   doc(db, "game_new", String(id)),
+    //   { ...data, users: updatedUsers },
+    //   { merge: true }
+    // );
   };
   return data !== null ? (
     <div className={styles.container}>
@@ -115,15 +131,16 @@ const GamePage: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        {/* {state === 0 && (
+        {state === 0 && (
           <Participants users={users} user={user} toggleReady={toggleReady} />
         )}
-        {state === 1 && (
-          <Questions
-            item={questions ? questions[currentQuestion] : null}
-            users={users}
-            answerCallback={answerCallback}
-          />
+        {state === 1 && <div>state 1</div>}
+        {/* {state === 1 && (
+           <Questions
+             item={questions ? questions[currentQuestion] : null}
+             users={users}
+             answerCallback={answerCallback}
+           />
         )}
         {state === 2 && <Results id={id} />} */}
       </main>

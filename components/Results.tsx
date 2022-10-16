@@ -43,7 +43,7 @@ const Results: NextPage = ({ id }) => {
   const [topSongs, setTopSongs] = useState([]);
 
   useEffect(() => {
-    onSnapshot(doc(db, "game", String(id)), (doc) => {
+    onSnapshot(doc(db, "game_new", String(id)), (doc) => {
       const data = doc.data();
       setData(data);
       if (data) {

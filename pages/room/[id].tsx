@@ -9,9 +9,9 @@ import { db } from "../../firebase/clientApp";
 import { doc, DocumentData, onSnapshot, setDoc } from "firebase/firestore";
 import CopyLink from "../../components/CopyLink";
 import { Button } from "@mui/material";
-import Participants from "../../components/participants";
-import Results from "../../components/results";
-import Questions from "../../components/questions";
+import Participants from "../../components/Participants";
+import Results from "../../components/Results";
+import Questions from "../../components/Questions";
 
 const GamePage: NextPage = () => {
   const router = useRouter();
@@ -26,17 +26,19 @@ const GamePage: NextPage = () => {
     if (typeof id !== "string" || id === undefined) {
       return;
     }
-    if (!window.location.href.includes("user=")) {
-      window.location.replace(
-        "https://us-central1-i-hear-u.cloudfunctions.net/auth"
-      );
+    if (!user) {
+      router.push(`/auth?redirect=${id}`);
     }
-    onSnapshot(doc(db, "game", String(id)), (doc) => {
+    onSnapshot(doc(db, "game_new", String(id)), (doc) => {
       const data = doc.data();
       setData(data);
       if (data) {
-        setUsers(Object.fromEntries(Object.entries(data!.users).sort()));
-        setQuestions(Object.values(data!.questions));
+        if (data!.users) {
+          setUsers(Object.fromEntries(Object.entries(data!.users).sort()));
+        }
+        if (data!.questions) {
+          setQuestions(Object.values(data!.questions));
+        }
         setState(data!.state);
         setCurrentQuestion(data!.currentQuestion);
       }
@@ -46,13 +48,13 @@ const GamePage: NextPage = () => {
   const nextQuestion = () => {
     if (currentQuestion < questions.length - 1) {
       setDoc(
-        doc(db, "game", String(id)),
+        doc(db, "game_new", String(id)),
         { ...data, currentQuestion: currentQuestion + 1 },
         { merge: true }
       );
     } else {
       setDoc(
-        doc(db, "game", String(id)),
+        doc(db, "game_new", String(id)),
         { ...data, state: 2 },
         { merge: true }
       );
@@ -75,7 +77,7 @@ const GamePage: NextPage = () => {
       }, 3000);
     }
     setDoc(
-      doc(db, "game", String(id)),
+      doc(db, "game_new", String(id)),
       { ...data, users: updatedUsers },
       { merge: true }
     );
@@ -93,14 +95,14 @@ const GamePage: NextPage = () => {
         })
       );
       setDoc(
-        doc(db, "game", String(id)),
+        doc(db, "game_new", String(id)),
         { ...data, users: updatedUsers, state: 1 },
         { merge: true }
       );
       return;
     }
     setDoc(
-      doc(db, "game", String(id)),
+      doc(db, "game_new", String(id)),
       { ...data, users: updatedUsers },
       { merge: true }
     );
@@ -113,7 +115,7 @@ const GamePage: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        {state === 0 && (
+        {/* {state === 0 && (
           <Participants users={users} user={user} toggleReady={toggleReady} />
         )}
         {state === 1 && (
@@ -123,7 +125,7 @@ const GamePage: NextPage = () => {
             answerCallback={answerCallback}
           />
         )}
-        {state === 2 && <Results id={id} />}
+        {state === 2 && <Results id={id} />} */}
       </main>
     </div>
   ) : (

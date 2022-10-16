@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import querystring from 'node:querystring'
-// ?code=AQAFB9zasQ2KSM9A8DBu1MaMZ0fyxEXJqEInbPncC5clFThg-7E3Z4hdN1q6yWfPB8CWrQBsjAWTkLq6FpAq5IMdE6mirFIKgMkq29HSIEvZm-Zhr3JvGYYpeDZD_fZXqKMR6-EpyddyRqrmD09b1Qer8Vbs9BAZbmqXOXq5cL0FwpoGBDMCMN5mHXjaIiDeN7sTC5m5RXBMF1J5vIM-gEwTpUW21SI6NzKjB45vUzKg7HNvIxQf
-const client_id = "caffbc46958b404b8dc0ea51e70c2206";
-const client_secret = "e11f93c3b0fe4439beaf2a6bdc4b45ce";
+import { db } from "../../firebase/clientApp";
+import { doc, DocumentData, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+const client_id = process.env.SPOTIFY_CLIENT_ID;
+const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
 
 const getAccessToken = async (code: string) => {
   const authOptions = {
@@ -51,7 +51,9 @@ const getProfile = async (accessToken: string) => {
 }
 
 const getTopTracks = async (accessToken: string) => {
-  return await getData(accessToken, 'https://api.spotify.com/v1/me/top/tracks')
+  const limit = 10
+  const time_range = "medium_term"
+  return await getData(accessToken, `https://api.spotify.com/v1/me/top/tracks?limit=${limit}&time_range=${time_range}`)
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -59,17 +61,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   var state = req.query.state || null;
   if (state === null || code === null) {
     console.log("state is null");
-    res.redirect(
-      "https://localhost:3000/" +
-      querystring.stringify({
-        error: "state_mismatch",
-      })
-    );
+    res.redirect("https://localhost:3000/");
   }
 
   const accessToken = await getAccessToken(<string>code);
   const profile = await getProfile(accessToken)
   const topTracks = await getTopTracks(accessToken)
 
-  res.status(200).json(profile);
+  const cleanedTopTracks = topTracks.items.map((entry: any) => {
+    return {
+      name: entry.name,
+      artists: entry.artists.map((artist: any) => artist.name),
+      preview: entry.preview_url,
+      img: entry.album.images.length ? entry.album.images[0].url : ''
+    }
+  })
+
+  // add user to database
+  // const docRef = doc(db, "game_new", "1HbU4IIs1DTueuxrHcm4");
+  // const docSnap = await getDoc(docRef);
+  // var users = {}
+  // if (docSnap.exists()) {
+  //   users = docSnap.data().users;
+  // }
+  const userId = profile.id
+  const userImg = profile.images.length ? profile.images[0].url : ''
+  const userObj = {
+    id: userId,
+    name: profile.display_name,
+    email: profile.email,
+    image: userImg,
+    top: cleanedTopTracks,
+  }
+
+  // setDoc(
+  //   docRef,
+  //   { users: { ...users, [userId]: userObj } },
+  //   { merge: true }
+  // );
+
+  res.redirect(`/auth?user=${userId}&data=${Buffer.from(JSON.stringify(userObj)).toString("base64")}`)
 }

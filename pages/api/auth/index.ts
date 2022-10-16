@@ -11,7 +11,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       client_id: client_id,
       scope: "user-read-private user-read-email user-top-read",
       redirect_uri:
-        "http://localhost:3000/api/auth2",
+        "http://localhost:3000/api/auth/callback",
       state: state
     })
   );

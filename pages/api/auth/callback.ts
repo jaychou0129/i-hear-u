@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { db } from "../../firebase/clientApp";
-import { doc, DocumentData, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 const client_id = process.env.SPOTIFY_CLIENT_ID;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
 
@@ -16,7 +14,7 @@ const getAccessToken = async (code: string) => {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code: code,
-      redirect_uri: encodeURI("http://localhost:3000/api/auth2"),
+      redirect_uri: encodeURI("http://localhost:3000/api/auth/callback"),
     }),
   };
 
